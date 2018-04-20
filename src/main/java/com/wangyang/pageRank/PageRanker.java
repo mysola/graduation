@@ -107,6 +107,10 @@ public class PageRanker {
 
     }
 
+    public void test(){
+        Random random = new Random();
+
+    }
 
     public void computeSocre(){
 
