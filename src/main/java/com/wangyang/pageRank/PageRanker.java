@@ -1,6 +1,7 @@
 package com.wangyang.pageRank;
 
 import com.wangyang.docProcess.NormalizedDocProcesser;
+import org.omg.PortableInterceptor.INACTIVE;
 
 import java.util.*;
 
@@ -76,41 +77,69 @@ public class PageRanker {
         }
     }
 
-    private Set<Triplet> graph;
+    //三元组存储稀疏矩阵，按主列次行的优先级排列
+    private Triplet[] graph;
+
+    //三元组每列开始处的索引
+    private int[] outerIndexArray;
 
     //url映射到存储数组下标
     private Map<String,Integer> urlRefIndexMap;
 
     private String[] urlArray;
 
-    public void buildGraph(){
+
+    public void buildGraph() {
         List<String> urls = normalizedDocProcesser.readAllNormalizedDocUrlList();
         urlRefIndexMap = new HashMap<String, Integer>(urls.size());
         urlArray = new String[urls.size()];
         int index = 0;
-        for(String url : urls){
+        //插入点
+        for (String url : urls) {
             urlArray[index] = url;
-            urlRefIndexMap.put(url,index);
+            urlRefIndexMap.put(url, index);
             index++;
         }
-        graph = new TreeSet<Triplet>();
-        for(String url : urls){
+        //插入边
+        /*
+        从无到有序再到转随机访问数据结构：
+        １．treeset 插入－排序循环　　toArray
+        2。linkedList 插入－插入循环　去重 排序（toArray 排序　toList）toArray
+         */
+        Set<Triplet> tempSet = new TreeSet<Triplet>();
+        int k = 0;
+        for (String url : urls) {
+            System.out.println(k++);
             List<String> innerUrls = normalizedDocProcesser.readNormalizedDocInnerUrl(url);
             Integer i = urlRefIndexMap.get(url);
-            for(String innerUrl : innerUrls){
+            for (String innerUrl : innerUrls) {
                 Integer j = urlRefIndexMap.get(innerUrl);
-                if(j!=null&&!j.equals(i)){
-                    graph.add(new Triplet(i,j,1.0));
+                if (j != null && !j.equals(i)) {
+                    tempSet.add(new Triplet(i, j, 1.0));
                 }
             }
         }
 
+        //转换随机访问数据结构,记录外部索引
+        outerIndexArray = new int[urlArray.length];
+        graph = new Triplet[tempSet.size()];
+        int graphIndex = 0, outIndex = 0, lastColIndex = -1;
+        for (Triplet triplet : tempSet) {
+            //复制元素toArray
+            graph[graphIndex] = triplet;
+            //若当前列不存在元素
+            while (outIndex < triplet.getJ()) {
+                outerIndexArray[outIndex++] = -1;
+            }
+            //若当前列索引与上一列索引不同，说明是新一列的开头，记录当前元素索引
+            if (lastColIndex < triplet.getJ()) {
+                outerIndexArray[outIndex++] = graphIndex;
+                lastColIndex = triplet.getJ();
+            }
+            graphIndex++;
+        }
     }
 
-    public void test(){
-        Random random = new Random();
-
-    }
 
     public void computeSocre(){
 
