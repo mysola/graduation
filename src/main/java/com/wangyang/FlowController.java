@@ -23,7 +23,6 @@ public class FlowController {
 
     public static void main(String[] args) throws Exception {
     //    new FlowController().execute();
-        new FlowController().pageRanker.buildGraph();
     }
 
     public void execute() throws Exception {
