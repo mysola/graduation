@@ -14,7 +14,7 @@ public class ComputeThread extends Thread{
 
     private int colIndex;
 
-    private volatile boolean waited = true;
+    private boolean waited = true;
 
 
     public ComputeThread(int order, Matrix matrix, int threadSum) {
@@ -43,15 +43,13 @@ public class ComputeThread extends Thread{
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        while (!tempPRs.stop) {
+        while (true) {
 
-//            System.out.println(order+"------>1   cur:"+tempPRs.curFlag);
             while (colIndex < matrix.getMatrixLen()) {
                 tempPRs.newPR[colIndex] = matrix.computeCol(tempPRs.curPR, colIndex);
 
                 colIndex += threadSum;
             }
-//            System.out.println(order+"------>2   cur:"+tempPRs.curFlag);
             if (tempPRs.curFlag.incrementAndGet()==threadSum) {
                 synchronized (tempPRs) {
                     tempPRs.notify();
@@ -62,14 +60,12 @@ public class ComputeThread extends Thread{
                 try {
                     waited = true;
                     this.notify();
-//                    System.out.println(order+"------>3   cur:"+tempPRs.curFlag);
-                    wait(4000);
+                    wait();
                     waited = false;
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    System.out.println("线程"+order+"退出");
                 }
             }
         }
-//        System.out.println(order + "------退出");
     }
 }

@@ -92,7 +92,7 @@ public class Matrix {
 
     private Set<Node> tmpSet = new TreeSet<Node>();
 
-    private static final int THREAD_SUM = 50;
+    private static final int THREAD_SUM = 20;
 
 
     public void insertNode(int i,int j){
@@ -202,12 +202,7 @@ public class Matrix {
         double[] newPR = null;
 
         while (error >= minDeviation) {
-            if(count>125)
-                ps.println(count + ":" + error + " : ");
-
-//            for(double d : tempPRs.curPR){
-//                System.out.println(d+"--");
-//            }
+//            ps.println(count + ":" + error + " : ");
 
             tempPRs.newPR = new double[matrixLen];
             tempPRs.curFlag.set(0);
@@ -236,7 +231,9 @@ public class Matrix {
             tempPRs.curPR = tempPRs.newPR;
             count++;
         }
-        tempPRs.stop = true;
+        for (ComputeThread t : threads){
+            t.interrupt();
+        }
         return initPR;
     }
 

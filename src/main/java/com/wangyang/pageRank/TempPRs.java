@@ -9,7 +9,4 @@ public class TempPRs {
 
     protected AtomicInteger curFlag = new AtomicInteger(0);
 
-    protected volatile boolean stop;
-
-
 }
