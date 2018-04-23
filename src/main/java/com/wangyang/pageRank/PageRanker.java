@@ -16,27 +16,37 @@ public class PageRanker {
 
     private PrintStream ps;
 
-    {
-        try {
-            ps = new PrintStream(new File("/home/mysola/IdeaProjects/testPR"));
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
-    }
+//    {
+//        try {
+//            ps = new PrintStream(new File("/home/mysola/IdeaProjects/testPR"));
+//        } catch (FileNotFoundException e) {
+//            e.printStackTrace();
+//        }
+//    }
 
-    public void testPR() {
+    public void testPR() throws FileNotFoundException {
 
-        matrix = new Matrix(10000);
+//        matrix = new Matrix(10000);
+//        matrix.setAlpha(0.1);
+//
+//        Random random = new Random();
+//        for(int i=0;i<1000000;i++){
+//            int j = random.nextInt(10000);
+//            int k = random.nextInt(10000);
+//            matrix.insertNode(j,k);
+//        }
+//        matrix.computePR(System.out);
+
+        Scanner sc = new Scanner(new File("/home/mysola/IdeaProjects/testPR"));
+        int nodeSum = Integer.valueOf(sc.nextLine());
+
+        matrix = new Matrix(nodeSum);
         matrix.setAlpha(0.1);
-
-        Random random = new Random();
-        for(int i=0;i<1000000;i++){
-            int j = random.nextInt(10000);
-            int k = random.nextInt(10000);
-            matrix.insertNode(j,k);
+        while(sc.hasNext()){
+            String[] strings = sc.nextLine().split(" ");
+            matrix.insertNode(Integer.valueOf(strings[0]),Integer.valueOf(strings[1]));
         }
-        matrix.computePR(System.out);
-
+        matrix.concurrentComputePR(System.out);
     }
 
     public void build() {
@@ -64,11 +74,16 @@ public class PageRanker {
                 Integer j = urlRefIndexMap.get(innerUrl);
                 if (j != null && !j.equals(i)) {
                     matrix.insertNode(i,j);
-                    ps.println(i+" "+j);
                 }
             }
         }
-        matrix.computePR(System.out);
+//        long a = System.currentTimeMillis();
+//        matrix.serialComputePR(System.out);
+//        System.out.println(System.currentTimeMillis()-a);
+
+        long a = System.currentTimeMillis();
+        matrix.concurrentComputePR(System.out);
+        System.out.println(System.currentTimeMillis()-a);
     }
 
 

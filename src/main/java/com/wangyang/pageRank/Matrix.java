@@ -92,24 +92,20 @@ public class Matrix {
 
     private Set<Node> tmpSet = new TreeSet<Node>();
 
+    private static final int THREAD_SUM = 50;
+
 
     public void insertNode(int i,int j){
         tmpSet.add(new Node(i,j));
         sumPerRow[i]++;
     }
 
-    public double[] computePR(PrintStream ps){
-        buildMatrix();
-        preMatrix();
-        return computeFinalPR(ps);
-    }
-
     /*
-       从无到有序再到转随机访问数据结构：
-       １．treeset 插入－排序循环　　toArray
-       2。linkedList 插入－插入循环　去重 排序（toArray 排序　toList）toArray
-        */
-    private void buildMatrix(){
+           从无到有序再到转随机访问数据结构：
+           １．treeset 插入－排序循环　　toArray
+           2。linkedList 插入－插入循环　去重 排序（toArray 排序　toList）toArray
+            */
+    private void preProcessMatrix() {
         //转换随机访问数据结构,记录外部索引
         newColIndexArrayInGraph = new int[matrixLen];
         graph = new Node[tmpSet.size()];
@@ -129,9 +125,8 @@ public class Matrix {
             graphIndex++;
         }
         tmpSet = null;
-    }
 
-    private void preMatrix() {
+        //预先计算一些值，避免后续重复计算
         minDeviation = Math.pow(0.1,String.valueOf(matrixLen).length());
         OneOfLength = 1.0 / matrixLen;
         alphaOfLength = alpha / matrixLen;
@@ -142,27 +137,136 @@ public class Matrix {
         }
     }
 
-    private double[] computeFinalPR(PrintStream ps){
+    public double[] serialComputePR(PrintStream ps){
+        preProcessMatrix();
+        return InternalSerialComputePR(ps);
+    }
+
+    public double[] concurrentComputePR(PrintStream ps){
+        preProcessMatrix();
+        return InternalConcurrentComputePR(ps);
+    }
+
+
+    private double[] InternalSerialComputePR(PrintStream ps){
         int count = 0;
         double[] initPR = new double[matrixLen];
+        double tmp = 1.0/matrixLen;
         for(int i=0;i<matrixLen;i++){
-            initPR[i] = 1.0/matrixLen;
+            initPR[i] = tmp;
         }
 
-        double[] tmpPR = null;
+        double[] curPR = initPR,newPR = null;
         double error = 1;
         while (error>=minDeviation) {
-            ps.print(count + ":"+error +"  ");
-            tmpPR = initPR;
-            initPR = computeNextPR(initPR);
-            error = norm(initPR,tmpPR);
-//            for (double d : initPR) {
-//                ps.print(d + " ");
+            ps.println(count + ":"+error +"  ");
+            newPR = new double[matrixLen];
+            for (int col = 0; col < newPR.length; col++) {
+                newPR[col] = computeCol(curPR,col);
+            }
+
+//            for(double d : newPR){
+//                System.out.print(d+"--");
 //            }
-            ps.println();
+//            System.out.println();
+
+            error = norm(curPR,newPR);
+            curPR = newPR;
+
             count++;
         }
+
         return initPR;
+    }
+
+
+    private double[] InternalConcurrentComputePR(PrintStream ps) {
+        int count = 0;
+        double[] initPR = new double[matrixLen];
+        double tmp = 1.0 / matrixLen;
+        for (int i = 0; i < matrixLen; i++) {
+            initPR[i] = tmp;
+        }
+
+        double error = 1;
+
+        ComputeThread[] threads = new ComputeThread[THREAD_SUM];
+        TempPRs tempPRs = new TempPRs();
+        for (int i = 0; i < threads.length; i++) {
+            threads[i] = new ComputeThread(i, this, THREAD_SUM);
+            threads[i].setTempPRs(tempPRs);
+            threads[i].resetColIndex();
+            threads[i].start();
+        }
+        tempPRs.curPR = initPR;
+        double[] newPR = null;
+
+        while (error >= minDeviation) {
+            if(count>125)
+                ps.println(count + ":" + error + " : ");
+
+//            for(double d : tempPRs.curPR){
+//                System.out.println(d+"--");
+//            }
+
+            tempPRs.newPR = new double[matrixLen];
+            tempPRs.curFlag.set(0);
+            //并发计算
+            for(ComputeThread t : threads){
+                synchronized (t){
+                    if(!t.isWaited()){
+                        try {
+                            t.wait();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    t.resetColIndex();
+                    t.notify();
+                }
+            }
+            synchronized (tempPRs){
+                try {
+                    tempPRs.wait();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+            error = norm(tempPRs.curPR, tempPRs.newPR);
+            tempPRs.curPR = tempPRs.newPR;
+            count++;
+        }
+        tempPRs.stop = true;
+        return initPR;
+    }
+
+    protected double computeCol(double[] curPR,int colIndex){
+        //newPR第col列的值
+        double col = 0;
+        //稀疏矩阵中第col列起点
+        int newColIndex = newColIndexArrayInGraph[colIndex];
+        //稀疏矩阵中第col列非零数偏移
+        int offset = 0;
+        //下一个待计算的非零节点
+        Node node = newColIndex == -1 ? null : graph[newColIndex + offset];
+        for (int i = 0; i < curPR.length; i++) {
+            if (node != null && node.getI() == i) {
+                col += amendedNonzero[i] * curPR[i];
+                offset++;
+                if (newColIndex + offset < graph.length && graph[newColIndex + offset].getJ() == colIndex) {
+                    node = graph[newColIndex + offset];
+                } else {
+                    node = null;
+                }
+            } else {
+                if (sumPerRow[i] == 0) {
+                    col += OneOfLength * curPR[i];
+                } else {
+                    col += alphaOfLength * curPR[i];
+                }
+            }
+        }
+        return col;
     }
 
     //计算两向量之间的差别
@@ -172,43 +276,6 @@ public class Matrix {
             norm+=Math.abs(a[i]-b[i]);
         }
         return norm;
-    }
-
-    //矩阵相乘
-    private double[] computeNextPR(double[] curPR) {
-        double[] newPR = new double[matrixLen];
-        int offset = 0, newColIndex = 0;
-        double tempSum = 0.0;
-        Node node = null;
-        for (int col = 0; col < newPR.length; col++) {
-            //newPR第col列的值
-            tempSum = 0;
-            //稀疏矩阵中第col列起点
-            newColIndex = newColIndexArrayInGraph[col];
-            //稀疏矩阵中第col列非零数偏移
-            offset = 0;
-            //下一个待计算的非零节点
-            node = newColIndex == -1 ? null : graph[newColIndex + offset];
-            for (int i = 0; i < curPR.length; i++) {
-                if (node != null && node.getI() == i) {
-                    tempSum += amendedNonzero[i] * curPR[i];
-                    offset++;
-                    if (newColIndex + offset < graph.length && graph[newColIndex + offset].getJ() == col) {
-                        node = graph[newColIndex + offset];
-                    } else {
-                        node = null;
-                    }
-                } else {
-                    if (sumPerRow[i] == 0) {
-                        tempSum += OneOfLength * curPR[i];
-                    } else {
-                        tempSum += alphaOfLength * curPR[i];
-                    }
-                }
-            }
-            newPR[col] = tempSum;
-        }
-        return newPR;
     }
 
     public Matrix(int matrixLen) {
