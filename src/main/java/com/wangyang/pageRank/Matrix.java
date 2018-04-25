@@ -1,7 +1,5 @@
 package com.wangyang.pageRank;
 
-import java.io.OutputStream;
-import java.io.PrintStream;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -90,12 +88,19 @@ public class Matrix {
     //误差下限
     private double minDeviation;
 
+
     private Set<Node> tmpSet = new TreeSet<Node>();
 
-    private static final int THREAD_SUM = 20;
+    //开启线程数量
+    private static final int THREAD_SUM = 10;
 
+    private boolean waited = true;
 
-    public void insertNode(int i,int j){
+    public boolean isWaited() {
+        return waited;
+    }
+
+    public void insertNode(int i, int j){
         tmpSet.add(new Node(i,j));
         sumPerRow[i]++;
     }
@@ -128,65 +133,55 @@ public class Matrix {
 
         //预先计算一些值，避免后续重复计算
         minDeviation = Math.pow(0.1,String.valueOf(matrixLen).length());
-        OneOfLength = 1.0 / matrixLen;
-        alphaOfLength = alpha / matrixLen;
-        double restOfAlphaInOne = 1 - alpha;
+        OneOfLength = 1.0/matrixLen;
+        alphaOfLength = alpha/matrixLen;
+        double restOfAlphaInOne = 1-alpha;
         amendedNonzero = new double[matrixLen];
         for (int i = 0; i < matrixLen; i++) {
-            amendedNonzero[i] = restOfAlphaInOne / sumPerRow[i] + alphaOfLength;
+            amendedNonzero[i] = restOfAlphaInOne/sumPerRow[i] + alphaOfLength;
         }
     }
 
-    public double[] serialComputePR(PrintStream ps){
-        preProcessMatrix();
-        return InternalSerialComputePR(ps);
-    }
-
-    public double[] concurrentComputePR(PrintStream ps){
-        preProcessMatrix();
-        return InternalConcurrentComputePR(ps);
-    }
-
-
-    private double[] InternalSerialComputePR(PrintStream ps){
-        int count = 0;
-        double[] initPR = new double[matrixLen];
-        double tmp = 1.0/matrixLen;
-        for(int i=0;i<matrixLen;i++){
-            initPR[i] = tmp;
-        }
-
-        double[] curPR = initPR,newPR = null;
-        double error = 1;
-        while (error>=minDeviation) {
-            ps.println(count + ":"+error +"  ");
-            newPR = new double[matrixLen];
-            for (int col = 0; col < newPR.length; col++) {
-                newPR[col] = computeCol(curPR,col);
-            }
-
-//            for(double d : newPR){
-//                System.out.print(d+"--");
-//            }
-//            System.out.println();
-
-            error = norm(curPR,newPR);
-            curPR = newPR;
-
-            count++;
-        }
-
-        return initPR;
-    }
-
-
-    private double[] InternalConcurrentComputePR(PrintStream ps) {
-        int count = 0;
+    public double[] initPR(){
         double[] initPR = new double[matrixLen];
         double tmp = 1.0 / matrixLen;
         for (int i = 0; i < matrixLen; i++) {
             initPR[i] = tmp;
         }
+        return initPR;
+    }
+
+    public double[] serialComputePR(){
+        preProcessMatrix();
+        double[] initPR = initPR();
+        return InternalSerialComputePR(initPR);
+    }
+
+    public double[] concurrentComputePR(){
+        preProcessMatrix();
+        double[] initPR = initPR();
+        return  InternalConcurrentComputePR(initPR);
+    }
+
+
+    private double[] InternalSerialComputePR(double[] initPR){
+
+        double[] curPR = initPR,newPR = null;
+        double error = 1;
+        while (error>minDeviation) {
+            newPR = new double[matrixLen];
+            for (int col = 0; col < newPR.length; col++) {
+                newPR[col] = computeCol(curPR,col);
+            }
+            error = norm(curPR,newPR);
+            curPR = newPR;
+        }
+
+        return curPR;
+    }
+
+
+    private double[] InternalConcurrentComputePR(double[] initPR) {
 
         double error = 1;
 
@@ -199,11 +194,10 @@ public class Matrix {
             threads[i].start();
         }
         tempPRs.curPR = initPR;
-        double[] newPR = null;
-
+        int count = 0;
         while (error >= minDeviation) {
-//            ps.println(count + ":" + error + " : ");
-
+            System.out.println(count+ ":"+error);
+            count++;
             tempPRs.newPR = new double[matrixLen];
             tempPRs.curFlag.set(0);
             //并发计算
@@ -220,21 +214,24 @@ public class Matrix {
                     t.notify();
                 }
             }
-            synchronized (tempPRs){
+
+            synchronized (this){
                 try {
-                    tempPRs.wait();
+                    waited = true;
+                    this.notify();
+                     wait();
+                     waited = false;
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
             }
             error = norm(tempPRs.curPR, tempPRs.newPR);
             tempPRs.curPR = tempPRs.newPR;
-            count++;
         }
         for (ComputeThread t : threads){
             t.interrupt();
         }
-        return initPR;
+        return tempPRs.curPR;
     }
 
     protected double computeCol(double[] curPR,int colIndex){
@@ -270,7 +267,7 @@ public class Matrix {
     private double norm(double[] a,double[] b){
         double norm = 0;
         for (int i=0;i<a.length;i++){
-            norm+=Math.abs(a[i]-b[i]);
+            norm += Math.abs(a[i]-b[i]);
         }
         return norm;
     }
@@ -328,27 +325,4 @@ public class Matrix {
         this.matrixLen = matrixLen;
     }
 
-    public double getOneOfLength() {
-        return OneOfLength;
-    }
-
-    public void setOneOfLength(double oneOfLength) {
-        OneOfLength = oneOfLength;
-    }
-
-    public double getAlphaOfLength() {
-        return alphaOfLength;
-    }
-
-    public void setAlphaOfLength(double alphaOfLength) {
-        this.alphaOfLength = alphaOfLength;
-    }
-
-    public double[] getAmendedNonzero() {
-        return amendedNonzero;
-    }
-
-    public void setAmendedNonzero(double[] amendedNonzero) {
-        this.amendedNonzero = amendedNonzero;
-    }
 }

@@ -3,6 +3,7 @@ package com.wangyang.pageRank;
 import com.wangyang.docProcess.NormalizedDocProcesser;
 
 import java.io.*;
+import java.math.BigDecimal;
 import java.util.*;
 
 public class PageRanker {
@@ -14,39 +15,23 @@ public class PageRanker {
     //url数组
     private String[] urlArray;
 
-    private PrintStream ps;
 
-//    {
-//        try {
-//            ps = new PrintStream(new File("/home/mysola/IdeaProjects/testPR"));
-//        } catch (FileNotFoundException e) {
-//            e.printStackTrace();
-//        }
-//    }
+    public void testPR(){
 
-    public void testPR() throws FileNotFoundException {
-
-//        matrix = new Matrix(10000);
-//        matrix.setAlpha(0.1);
-//
-//        Random random = new Random();
-//        for(int i=0;i<1000000;i++){
-//            int j = random.nextInt(10000);
-//            int k = random.nextInt(10000);
-//            matrix.insertNode(j,k);
-//        }
-//        matrix.computePR(System.out);
-
-        Scanner sc = new Scanner(new File("/home/mysola/IdeaProjects/testPR"));
-        int nodeSum = Integer.valueOf(sc.nextLine());
-
-        matrix = new Matrix(nodeSum);
+        matrix = new Matrix(10000);
         matrix.setAlpha(0.1);
-        while(sc.hasNext()){
-            String[] strings = sc.nextLine().split(" ");
-            matrix.insertNode(Integer.valueOf(strings[0]),Integer.valueOf(strings[1]));
+
+        Random random = new Random();
+        for(int i=0;i<10000;i++){
+            for (int j = 0; j <10000 ; j++) {
+                if(i==j){
+                    matrix.insertNode(i,j);
+                }
+
+            }
         }
-        matrix.concurrentComputePR(System.out);
+        matrix.concurrentComputePR();
+
     }
 
     public void build() {
@@ -77,13 +62,10 @@ public class PageRanker {
                 }
             }
         }
-//        long a = System.currentTimeMillis();
-//        matrix.serialComputePR(System.out);
-//        System.out.println(System.currentTimeMillis()-a);
-
         long a = System.currentTimeMillis();
-        matrix.concurrentComputePR(System.out);
+        matrix.concurrentComputePR();
         System.out.println(System.currentTimeMillis()-a);
+
     }
 
 

@@ -8,12 +8,11 @@ public class Test1 {
         while (true){
             run();
         }
-
     }
 
     public static void run(){
         PageRanker pageRanker = new PageRanker();
-        //    pageRanker.testPR();
+       //     pageRanker.testPR();
         pageRanker.build();
     }
 }

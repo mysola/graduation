@@ -44,18 +44,24 @@ public class ComputeThread extends Thread{
             e.printStackTrace();
         }
         while (true) {
-
             while (colIndex < matrix.getMatrixLen()) {
                 tempPRs.newPR[colIndex] = matrix.computeCol(tempPRs.curPR, colIndex);
 
                 colIndex += threadSum;
             }
             if (tempPRs.curFlag.incrementAndGet()==threadSum) {
-                synchronized (tempPRs) {
-                    tempPRs.notify();
+                synchronized (matrix) {
+
+                    if(!matrix.isWaited()){
+                        try {
+                            matrix.wait();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    matrix.notify();
                 }
             }
-
             synchronized (this) {
                 try {
                     waited = true;
@@ -64,6 +70,7 @@ public class ComputeThread extends Thread{
                     waited = false;
                 } catch (InterruptedException e) {
                     System.out.println("线程"+order+"退出");
+                    return;
                 }
             }
         }
