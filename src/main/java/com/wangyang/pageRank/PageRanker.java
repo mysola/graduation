@@ -12,9 +12,6 @@ public class PageRanker {
 
     private Matrix matrix;
 
-    //url数组
-    private String[] urlArray;
-
 
     public void testPR(){
 
@@ -38,7 +35,8 @@ public class PageRanker {
         List<String> urls = normalizedDocProcesser.readAllNormalizedDocUrlList();
         //url映射到存储数组下标
         Map<String, Integer> urlRefIndexMap = new HashMap<String, Integer>(urls.size());
-        urlArray = new String[urls.size()];
+        //url数组
+        String[] urlArray = new String[urls.size()];
         int index = 0;
         //设置　url数组以及url到数组索引的映射
         for (String url : urls) {

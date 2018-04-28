@@ -1,18 +1,12 @@
 package test;
 
-import com.wangyang.pageRank.PageRanker;
+import com.wangyang.docIndex.Indexer;
 
 
 public class Test1 {
     public static void main(String[] args) throws Exception {
-        while (true){
-            run();
-        }
+        Indexer indexer = new Indexer();
+        indexer.index();
     }
 
-    public static void run(){
-        PageRanker pageRanker = new PageRanker();
-       //     pageRanker.testPR();
-        pageRanker.build();
-    }
 }

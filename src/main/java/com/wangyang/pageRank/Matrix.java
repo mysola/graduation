@@ -91,14 +91,6 @@ public class Matrix {
 
     private Set<Node> tmpSet = new TreeSet<Node>();
 
-    //开启线程数量
-    private static final int THREAD_SUM = 10;
-
-    private boolean waited = true;
-
-    public boolean isWaited() {
-        return waited;
-    }
 
     public void insertNode(int i, int j){
         tmpSet.add(new Node(i,j));
@@ -142,7 +134,7 @@ public class Matrix {
         }
     }
 
-    public double[] initPR(){
+    private double[] getInitPR(){
         double[] initPR = new double[matrixLen];
         double tmp = 1.0 / matrixLen;
         for (int i = 0; i < matrixLen; i++) {
@@ -153,13 +145,13 @@ public class Matrix {
 
     public double[] serialComputePR(){
         preProcessMatrix();
-        double[] initPR = initPR();
+        double[] initPR = getInitPR();
         return InternalSerialComputePR(initPR);
     }
 
     public double[] concurrentComputePR(){
         preProcessMatrix();
-        double[] initPR = initPR();
+        double[] initPR = getInitPR();
         return  InternalConcurrentComputePR(initPR);
     }
 
@@ -183,55 +175,15 @@ public class Matrix {
 
     private double[] InternalConcurrentComputePR(double[] initPR) {
 
-        double error = 1;
-
-        ComputeThread[] threads = new ComputeThread[THREAD_SUM];
-        TempPRs tempPRs = new TempPRs();
-        for (int i = 0; i < threads.length; i++) {
-            threads[i] = new ComputeThread(i, this, THREAD_SUM);
-            threads[i].setTempPRs(tempPRs);
-            threads[i].resetColIndex();
-            threads[i].start();
+        DispatchThread dispatchThread = new DispatchThread(this,minDeviation,initPR);
+        dispatchThread.init();
+        dispatchThread.start();
+        try {
+            dispatchThread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
-        tempPRs.curPR = initPR;
-        int count = 0;
-        while (error >= minDeviation) {
-            System.out.println(count+ ":"+error);
-            count++;
-            tempPRs.newPR = new double[matrixLen];
-            tempPRs.curFlag.set(0);
-            //并发计算
-            for(ComputeThread t : threads){
-                synchronized (t){
-                    if(!t.isWaited()){
-                        try {
-                            t.wait();
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                    t.resetColIndex();
-                    t.notify();
-                }
-            }
-
-            synchronized (this){
-                try {
-                    waited = true;
-                    this.notify();
-                     wait();
-                     waited = false;
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-            error = norm(tempPRs.curPR, tempPRs.newPR);
-            tempPRs.curPR = tempPRs.newPR;
-        }
-        for (ComputeThread t : threads){
-            t.interrupt();
-        }
-        return tempPRs.curPR;
+        return dispatchThread.getResultPR();
     }
 
     protected double computeCol(double[] curPR,int colIndex){
@@ -264,7 +216,7 @@ public class Matrix {
     }
 
     //计算两向量之间的差别
-    private double norm(double[] a,double[] b){
+    protected double norm(double[] a,double[] b){
         double norm = 0;
         for (int i=0;i<a.length;i++){
             norm += Math.abs(a[i]-b[i]);

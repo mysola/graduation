@@ -15,6 +15,9 @@ public class NormalizedDoc {
     @JsonIgnore
     private String[] innerUrls;
 
+    public NormalizedDoc() {
+    }
+
     public NormalizedDoc(String keywords, String description, String title, String charset) {
         this.keywords = keywords;
         this.description = description;
