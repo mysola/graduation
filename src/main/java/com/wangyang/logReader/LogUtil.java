@@ -1,4 +1,4 @@
-package com.wangyang.utils;
+package com.wangyang.logReader;
 
 
 import com.wangyang.logReader.LineInLog;

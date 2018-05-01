@@ -3,6 +3,7 @@ package com.wangyang.docIndex;
 
 import com.wangyang.docProcess.NormalizedDoc;
 import com.wangyang.docProcess.NormalizedDocProcesser;
+import org.apache.lucene.analysis.cn.smart.SmartChineseAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.*;
 import org.apache.lucene.index.IndexWriter;
@@ -17,11 +18,6 @@ import java.nio.file.Paths;
 
 public class Indexer {
 
-    private static final float TITLE_BOOST = 1F;
-
-    private static final float DESCRI_BOOST = 1F;
-    private static final float KEYWORD_BOOST = 1F;
-
     private static final String indexDir = "/home/mysola/IdeaProjects/indexs/";
 
     private IndexWriter indexWriter;
@@ -30,7 +26,7 @@ public class Indexer {
 
     public Indexer() throws IOException {
         Directory dir = FSDirectory.open(Paths.get(indexDir));
-        indexWriter = new IndexWriter(dir,new IndexWriterConfig(new StandardAnalyzer()));
+        indexWriter = new IndexWriter(dir,new IndexWriterConfig(LuceneUtil.getAnalyzer()));
         normalizedDocProcesser.openDocFile();
     }
 

@@ -6,7 +6,7 @@ import com.wangyang.docProcess.DocProcessor;
 import com.wangyang.logReader.CrawlLogReader;
 import com.wangyang.logReader.LineInLog;
 import com.wangyang.pageRank.PageRanker;
-import com.wangyang.utils.LogUtil;
+import com.wangyang.logReader.LogUtil;
 
 import java.io.File;
 
