@@ -1,6 +1,5 @@
 package test;
 
-import com.wangyang.docIndex.Indexer;
 import com.wangyang.docIndex.Searcher;
 
 
@@ -12,6 +11,8 @@ public class Test1 {
         searcher.init();
         searcher.search("三亚 九");
         searcher.closeReader();
+//        PageRanker pageRanker = new PageRanker();
+//        pageRanker.build();
     }
 
 }

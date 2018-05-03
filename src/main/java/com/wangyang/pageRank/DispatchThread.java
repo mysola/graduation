@@ -55,6 +55,7 @@ public class DispatchThread extends Thread{
             } catch (InterruptedException e) {
                 return;
             }
+
             count++;
             System.out.println(count+":"+error);
         }
