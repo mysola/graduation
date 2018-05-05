@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.wangyang.mapper.UrlClickDao">
+
+    <select id="getRealNameUrlClick" resultType="UrlClick">
+        select url,username,doc_click.click_count as realNameClick from
+        doc_url,doc_click,user_inf where username = #{username}
+    </select>
+
+    <select id="getAnonymousUrlClick" resultType="UrlClick">
+        select url,doc_url.click_count as anonymousClick from doc_url
+    </select>
+
+</mapper>

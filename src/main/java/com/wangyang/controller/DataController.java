@@ -17,7 +17,6 @@ public class DataController {
 
     @RequestMapping(value = "search")
     String search(){
-
         return "Hello Spring Boot!";
     }
 
