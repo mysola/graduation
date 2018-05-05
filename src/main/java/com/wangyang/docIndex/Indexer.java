@@ -42,7 +42,7 @@ public class Indexer {
         if(description!=null&&!"".equals(description)){
             doc.add(new TextField("description", description, Field.Store.YES));
         }
-        doc.add(new TextField("text",normalizedDoc.getText(),Field.Store.NO));
+        doc.add(new TextField("text",normalizedDoc.getText(),Field.Store.YES));
 
         doc.add(new StoredField("url",normalizedDoc.getUrl()));
         return doc;
