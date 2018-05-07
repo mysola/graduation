@@ -1,10 +1,13 @@
 package com.wangyang.pageRank;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wangyang.docProcess.NormalizedDocProcesser;
 
 import java.io.*;
-import java.math.BigDecimal;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class PageRanker {
 
@@ -12,35 +15,21 @@ public class PageRanker {
 
     private Matrix matrix;
 
+    private Map<String, Integer> urlRefIndexMap;
 
-    public void testPR(){
+    private double[] pr;
 
-        matrix = new Matrix(10000);
-        matrix.setAlpha(0.1);
+    private static final String PR_PATH = "/home/mysola/IdeaProjects/pageRank.pr";
 
-        Random random = new Random();
-        for(int i=0;i<10000;i++){
-            for (int j = 0; j <10000 ; j++) {
-                if(i==j){
-                    matrix.insertNode(i,j);
-                }
-
-            }
-        }
-        matrix.concurrentComputePR();
-
-    }
+    private ObjectMapper mapper = new ObjectMapper();
 
     public void build() {
         List<String> urls = normalizedDocProcesser.readAllNormalizedDocUrlList();
         //url映射到存储数组下标
-        Map<String, Integer> urlRefIndexMap = new HashMap<String, Integer>(urls.size());
-        //url数组
-        String[] urlArray = new String[urls.size()];
+        urlRefIndexMap = new HashMap<>(urls.size());
         int index = 0;
         //设置　url数组以及url到数组索引的映射
         for (String url : urls) {
-            urlArray[index] = url;
             urlRefIndexMap.put(url, index);
             index++;
         }
@@ -61,10 +50,30 @@ public class PageRanker {
             }
         }
         long a = System.currentTimeMillis();
-        matrix.concurrentComputePR();
+        pr = matrix.concurrentComputePR();
         System.out.println(System.currentTimeMillis()-a);
 
     }
 
+
+    public void writePR() throws IOException {
+        Map<String,Double> PRMap = new HashMap<>(urlRefIndexMap.size());
+        for(Map.Entry<String,Integer> entry : urlRefIndexMap.entrySet()){
+            PRMap.put(entry.getKey(),pr[entry.getValue()]);
+        }
+        BufferedWriter bw = new BufferedWriter(new FileWriter(PR_PATH));
+        bw.write(mapper.writeValueAsString(PRMap));
+        bw.close();
+    }
+
+    public Map<String,Double> readPR() throws IOException {
+
+        BufferedReader bw = new BufferedReader(new FileReader(PR_PATH));
+
+        Map<String,Double> PRMap = mapper.readValue(bw, new TypeReference<Map<String,Double>>() {
+        });
+        bw.close();
+        return PRMap;
+    }
 
 }

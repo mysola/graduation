@@ -6,10 +6,13 @@ import com.wangyang.docProcess.NormalizedDocProcesser;
 import org.apache.lucene.analysis.cn.smart.SmartChineseAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.*;
+import org.apache.lucene.index.DocValuesType;
+import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
+import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.Version;
 
 import java.io.File;
@@ -24,6 +27,15 @@ public class Indexer {
 
     private NormalizedDocProcesser normalizedDocProcesser = new NormalizedDocProcesser();
 
+    private FieldType urlFieldType = new FieldType();
+    {
+        urlFieldType.setStored(true);
+        urlFieldType.setTokenized(false);
+        urlFieldType.setDocValuesType(DocValuesType.SORTED);
+        urlFieldType.setIndexOptions(IndexOptions.DOCS);
+        urlFieldType.freeze();
+    }
+
     public Indexer() throws IOException {
         Directory dir = FSDirectory.open(Paths.get(indexDir));
         indexWriter = new IndexWriter(dir,new IndexWriterConfig(LuceneUtil.getAnalyzer()));
@@ -37,14 +49,23 @@ public class Indexer {
         String text = normalizedDoc.getText();
         String url = normalizedDoc.getUrl();
 
-        doc.add(new TextField("title",normalizedDoc.getTitle(),Field.Store.YES));
+        if(title!=null&&!"".equals(title)){
+            doc.add(new TextField("title",title,Field.Store.YES));
+        }
 
         if(description!=null&&!"".equals(description)){
             doc.add(new TextField("description", description, Field.Store.YES));
         }
-        doc.add(new TextField("text",normalizedDoc.getText(),Field.Store.YES));
 
-        doc.add(new StoredField("url",normalizedDoc.getUrl()));
+        if(text!=null&&!"".equals(text)){
+            doc.add(new TextField("text", text, Field.Store.YES));
+        }
+
+        if(url!=null&&!"".equals(url)){
+            doc.add(new SortedDocValuesField("url",new BytesRef(url)));
+        //    doc.add(new StoredField("url", url, urlFieldType));
+
+        }
         return doc;
     }
 
@@ -65,11 +86,10 @@ public class Indexer {
     }
 
     private long indexDoc(Document document) throws IOException {
-
         return indexWriter.addDocument(document);
     }
 
-    private void close() throws IOException {
+    public void close() throws IOException {
         indexWriter.close();
     }
 }

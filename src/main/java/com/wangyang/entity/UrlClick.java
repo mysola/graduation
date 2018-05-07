@@ -7,7 +7,7 @@ public class UrlClick {
 
     private String username;
 
-    private String realNameClick;
+    private Integer realNameClick;
 
     public String getUrl() {
         return url;
@@ -33,11 +33,11 @@ public class UrlClick {
         this.username = username;
     }
 
-    public String getRealNameClick() {
+    public Integer getRealNameClick() {
         return realNameClick;
     }
 
-    public void setRealNameClick(String realNameClick) {
+    public void setRealNameClick(Integer realNameClick) {
         this.realNameClick = realNameClick;
     }
 }

@@ -5,7 +5,9 @@ import org.apache.lucene.document.Document;
 import org.apache.lucene.index.*;
 import org.apache.lucene.queries.CustomScoreProvider;
 import org.apache.lucene.queries.CustomScoreQuery;
+import org.apache.lucene.queries.function.FunctionValues;
 import org.apache.lucene.queries.function.valuesource.BytesRefFieldSource;
+import org.apache.lucene.queries.function.valuesource.FieldCacheSource;
 import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
@@ -83,25 +85,30 @@ public class Searcher {
         return new MyCustomScoreQuery(query);
     }
 
-    public void search(String queryStr,double[] pageRank) throws IOException, InvalidTokenOffsetsException, ParseException {
-        Query query = buildQuery(queryStr);
+    public void search(String queryStr) {
+        try {
+            Query query = buildQuery(queryStr);
 
-        System.out.println(query.toString());
-        TopDocs topDocs = indexSearcher.search(query,10);
-        Document document = null;
-        QueryScorer scorer = new QueryScorer(query);
-        Fragmenter fragmenter = new SimpleSpanFragmenter(scorer);
-        SimpleHTMLFormatter simpleHTMLFormatter = new SimpleHTMLFormatter("<b><font color='red'>", "</font>");
-        Highlighter highlighter = new Highlighter(simpleHTMLFormatter, scorer);
-        highlighter.setTextFragmenter(fragmenter);
+            System.out.println(query.toString());
+            TopDocs topDocs = indexSearcher.search(query,10);
+            Document document = null;
+            QueryScorer scorer = new QueryScorer(query);
+            Fragmenter fragmenter = new SimpleSpanFragmenter(scorer);
+            SimpleHTMLFormatter simpleHTMLFormatter = new SimpleHTMLFormatter("<b><font color='red'>", "</font>");
+            Highlighter highlighter = new Highlighter(simpleHTMLFormatter, scorer);
+            highlighter.setTextFragmenter(fragmenter);
 
-        for(ScoreDoc scoreDoc : topDocs.scoreDocs){
-            document = indexSearcher.doc(scoreDoc.doc);
-            String title = document.get("title");
-            String highLightTitle = highlighter.getBestFragment(
-                    LuceneUtil.getAnalyzer(),"title",title);
-            System.out.println(highLightTitle);
+            for(ScoreDoc scoreDoc : topDocs.scoreDocs){
+                document = indexSearcher.doc(scoreDoc.doc);
+                String title = document.get("title");
+                String highLightTitle = highlighter.getBestFragment(
+                        LuceneUtil.getAnalyzer(),"title",title);
+                System.out.println(highLightTitle);
+            }
+        }catch (Exception e){
+            e.printStackTrace();
         }
+
     }
 
     /**
@@ -123,33 +130,38 @@ public class Searcher {
 
         private static final float REAL_NAME_CLICK_BOOST = 0.1f;
 
-        private Set<String> urlFieldName = new HashSet<>();
-        {
-            urlFieldName.add("url");
-        }
-
-        /**重写评分方法，假定需求为文档size大于1000的评分/1000**/
+        /**
+         * 重写评分方法
+         **/
         @Override
         public float customScore(int doc, float subQueryScore, float valSrcScore) throws IOException {
-            // 从域缓存中加载索引字段信息
-            String url = context.reader().document(doc,urlFieldName).get("url");
-//　　　　　　　　　　BinaryDocValues weights = FieldCache.DEFAULT.getTerms(context.reader(), "title", true);
-//　　　　　　　　　　if(weights.get(doc).utf8ToString().equals("1")){
-//　　　　　　　　　　　　System.out.println(doc+" : "+weights.get(doc).utf8ToString());
-//
-//　　　　　　　　　　　　System.out.println(context.reader().document(doc).get("author"));
-//
-//　　　　　　　　　　　　return subQueryScore * valSrcScore*15;
-//　　　　　　　　　　}
-            /*
-             * 通过得分相乘放大分数
-             * 此处可以控制与原有得分结合的方式，加减乘除都可以
-             * **/
 
-            float prScore = 1;
-            float clickScore = 1;
-            return 1;
-//            return subQueryScore*QUERY_BOOST+prScore*PAGE_RANK_BOOST+clickScore*CLICK_BOOST;
+            SortedDocValues DocUrlValue = DocValues.getSorted(context.reader(),"url");
+
+            String url = DocUrlValue.get(doc).utf8ToString();
+
+            float prScore = pageRank.get(url).floatValue();
+
+            int anonymousClickScore = 0;
+            if(anonymousUrlClick!=null){
+                UrlClick anonymousClick = anonymousUrlClick.get(url);
+                if(anonymousClick!=null){
+                    anonymousClickScore = anonymousClick.getAnonymousClick();
+                }
+            }
+
+
+            int realNameClickScore = 0;
+            if(realNameUrlClick!=null){
+                UrlClick realNameClick = realNameUrlClick.get(url);
+                if(realNameClick!=null){
+                    realNameClickScore = realNameClick.getRealNameClick();
+                }
+            }
+
+            return subQueryScore * QUERY_BOOST + prScore * PAGE_RANK_BOOST +
+                    anonymousClickScore * ANONYMOUS_CLICK_BOOST +
+                    realNameClickScore * REAL_NAME_CLICK_BOOST;
         }
     }
     /**
