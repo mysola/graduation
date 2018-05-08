@@ -14,15 +14,8 @@
 .page-pad{
     margin-top: 30px;
 }
-/*.result-content{*/
-	/*font-size: 14px;*/
-	/*line-height: 20px;*/
-/*}*/
-/*.hero-unit{*/
-	/*padding: 0px;*/
-	/*background: white;*/
-	/*margin: 0;*/
-/*}*/
-/*.hero-unit *{*/
-	/*margin: 0;*/
-/*}*/
+.btn:focus,.btn:active:focus {
+    outline: none;
+    border-color: transparent;
+    box-shadow:none;
+}

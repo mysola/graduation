@@ -18,15 +18,14 @@ import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.search.highlight.*;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
+import org.apache.lucene.util.BytesRef;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import java.io.IOException;
 import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 @Component
 public class Searcher {
@@ -55,6 +54,8 @@ public class Searcher {
 
     private Map<String,UrlClick> realNameUrlClick;
 
+    private SortedDocValues[] docUrlValues;
+
     public void setPageRank(Map<String, Double> pageRank) {
         this.pageRank = pageRank;
     }
@@ -78,6 +79,30 @@ public class Searcher {
         boosts.put(fields[2],DESCRI_BOOST);
 
         queryParser = new MultiFieldQueryParser(fields,LuceneUtil.getAnalyzer(), boosts);
+
+        initDocUrlValues();
+
+    }
+
+    private void initDocUrlValues() throws IOException {
+        int len = indexSearcher.getIndexReader().leaves().size();
+        docUrlValues = new SortedDocValues[len];
+        for (int i = 0; i < len; i++) {
+            docUrlValues[i] = DocValues.getSorted(indexSearcher.getIndexReader()
+                    .leaves().get(i).reader(),"url");
+        }
+    }
+
+    private String getDocUrlFromDocValues(int docID){
+        BytesRef urlByteRef = null;
+        for(SortedDocValues docValues : docUrlValues){
+            urlByteRef = docValues.get(docID);
+
+            if(urlByteRef!=null&&urlByteRef.length!=0){
+                return urlByteRef.utf8ToString();
+            }
+        }
+        return null;
     }
 
     private Query buildQuery(String queryStr) throws ParseException {
@@ -85,12 +110,11 @@ public class Searcher {
         return new MyCustomScoreQuery(query);
     }
 
-    public void search(String queryStr) {
+    public SearchResult[] search(String queryStr,int pageNum) {
         try {
             Query query = buildQuery(queryStr);
 
-            System.out.println(query.toString());
-            TopDocs topDocs = indexSearcher.search(query,10);
+            TopDocs topDocs = indexSearcher.search(query,3*10);
             Document document = null;
             QueryScorer scorer = new QueryScorer(query);
             Fragmenter fragmenter = new SimpleSpanFragmenter(scorer);
@@ -98,17 +122,38 @@ public class Searcher {
             Highlighter highlighter = new Highlighter(simpleHTMLFormatter, scorer);
             highlighter.setTextFragmenter(fragmenter);
 
-            for(ScoreDoc scoreDoc : topDocs.scoreDocs){
-                document = indexSearcher.doc(scoreDoc.doc);
+            SearchResult[] results = new SearchResult[10];
+            int index = 0;
+            for (int i = (pageNum-1)*10; i < pageNum*10&&i<topDocs.totalHits; i++) {
+                document = indexSearcher.doc(topDocs.scoreDocs[i].doc);
+                String url = getDocUrlFromDocValues(topDocs.scoreDocs[i].doc);
+
                 String title = document.get("title");
                 String highLightTitle = highlighter.getBestFragment(
                         LuceneUtil.getAnalyzer(),"title",title);
-                System.out.println(highLightTitle);
+
+                if(highLightTitle==null||"".equals(highLightTitle)){
+                    highLightTitle = title;
+                }
+
+                String content = document.get("text");
+                String highLightContent = highlighter.getBestFragment(
+                        LuceneUtil.getAnalyzer(),"text",content);
+
+                if(highLightContent==null||"".equals(highLightContent)){
+                    content = document.get("description");
+                    highLightContent = highlighter.getBestFragment(
+                            LuceneUtil.getAnalyzer(),"description",content);
+                }
+
+
+                results[index++] = new SearchResult(highLightTitle,highLightContent,queryStr,url);
             }
+            return results;
         }catch (Exception e){
             e.printStackTrace();
         }
-
+        return null;
     }
 
     /**
@@ -134,11 +179,8 @@ public class Searcher {
          * 重写评分方法
          **/
         @Override
-        public float customScore(int doc, float subQueryScore, float valSrcScore) throws IOException {
-
-            SortedDocValues DocUrlValue = DocValues.getSorted(context.reader(),"url");
-
-            String url = DocUrlValue.get(doc).utf8ToString();
+        public float customScore(int doc, float subQueryScore, float valSrcScore){
+            String url = getDocUrlFromDocValues(doc);
 
             float prScore = pageRank.get(url).floatValue();
 
@@ -180,6 +222,7 @@ public class Searcher {
         }
     }
 
+    @PreDestroy
     public void closeReader() throws IOException {
         indexReader.close();
     }

@@ -1,11 +1,11 @@
 package com.wangyang.service;
 
-import com.wangyang.entity.UrlClick;
+import com.wangyang.docIndex.SearchResult;
 
 
 public interface UserService {
 
-    UrlClick search(String queryStr);
+    SearchResult[] search(String queryStr, int pageNum);
 
     String link(String linkUrl);
 }

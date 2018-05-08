@@ -1,0 +1,144 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+    <title>首页</title>
+
+    <link href="/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/search.css" rel="stylesheet">
+    <!--[if lt IE 9]>
+    <meta http-equiv="refresh" content="0;ie.html"/>
+    <![endif]-->
+</head>
+
+<body>
+
+<div class="container-fluid">
+
+	<div class="row head-pad left-pad">
+
+			<div class="col-xs-12 col-md-8">
+				<div class="input-group col-md-offset-1 col-md-8">
+					<input type="text" class="form-control input-lg" id="search-input">
+					<span class="input-group-addon btn btn-primary">搜索</span>
+				</div>
+			</div>
+
+			<div class="col-xs-6 col-md-4 text-right">
+				<button class="btn btn-link" data-toggle="modal" data-target="#myModal" type="button">登录</button>
+			</div>
+
+	</div>
+
+	<div class="row br-pad">
+		<br/>
+	</div>
+
+	<div id="search-result">
+		<div class="row left-pad" id="hidden-search-div">
+			<div class="col-xs-12 col-md-8">
+				<div class="input-group col-md-offset-1 col-md-10">
+					<div class="hero-unit">
+						<h3>
+							<a class="link-url"></a>
+						</h3>
+						<p class="result-content"></p>
+					</div>
+				</div>
+			</div>
+		</div>
+
+	</div>
+
+	<div id="page-div" class="row page-pad">
+		<ul class="pager col-md-offset-2 col-md-8">
+			<li><a href="#">&larr;上一页</a></li>
+			<li>第<label id="pageNum">1</label>页</li>
+			<li><a href="#">下一页&rarr;</a></li>
+		</ul>
+	</div>
+
+</div>
+
+<div class="container-fluid">
+	<!-- 模态框（Modal） -->
+	<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+					<h3 class="text-center text-primary" id="myModalLabel">登录</h3>
+				</div>
+				<div class="modal-body">
+					<form action="" class="form col-md-12 center-block">
+						<div class="form-group">
+							<input type="text" class="form-control input-lg" placeholder="账号">
+						</div>
+						<div class="form-group">
+							<input type="password" class="form-control input-lg" placeholder="登录密码">
+						</div>
+						<div class="form-group">
+							<div class="checkbox">
+								<label for="remember-me" style="padding-left: 0;margin-right: 23px;">
+									下次自动登录
+								</label>
+								<input type="checkbox" style="" id="remember-me">
+							</div>
+							<button class="btn btn-primary btn-lg btn-block">立刻登录</button>
+						</div>
+					</form>
+				</div>
+				<div class="modal-footer">
+
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+<script type="text/javascript" src="/js/jquery.min.js" ></script>
+<script type="text/javascript" src="/js/bootstrap.min.js" ></script>
+<script type="text/javascript">
+	var pageNum = getQueryString('pageNum');
+	if(pageNum==null){
+	    pageNum = 1;
+	}
+    $('#pageNum').text(pageNum);
+	var queryStr = getQueryString('queryStr');
+	search(queryStr,pageNum);
+
+    function getQueryString(name) {
+        var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)"); //构造一个含有目标参数的正则表达式对象
+        var r = window.location.search.substr(1).match(reg);  //匹配目标参数
+        if (r != null) return unescape(r[2]); return null; //返回参数值
+    }
+    function search(query,pageNum) {
+        var url = "/search?queryStr="+query+"&pageNum="+pageNum;
+        $.ajax({
+            type: 'get',//方法类型
+            url:url,
+            contentType: "application/json; charset=utf-8",
+            success: function (data) {
+                $.each(data,function(index,value){
+                    addSearchResult(value.title,value.content,value.link);
+                });
+			}
+
+        });
+    }
+    
+    function addSearchResult(title,content,link) {
+        var div = $('#hidden-search-div').clone(true);
+		div.find('.link-url').attr("href","/link?linkUrl="+link);
+		div.find('.link-url').text(title);
+        div.find('.result-content').text(content);
+        $('#search-result').append(div);
+    }
+</script>
+</body>
+
+</html>

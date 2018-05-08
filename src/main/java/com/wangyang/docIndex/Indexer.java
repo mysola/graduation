@@ -27,15 +27,6 @@ public class Indexer {
 
     private NormalizedDocProcesser normalizedDocProcesser = new NormalizedDocProcesser();
 
-    private FieldType urlFieldType = new FieldType();
-    {
-        urlFieldType.setStored(true);
-        urlFieldType.setTokenized(false);
-        urlFieldType.setDocValuesType(DocValuesType.SORTED);
-        urlFieldType.setIndexOptions(IndexOptions.DOCS);
-        urlFieldType.freeze();
-    }
-
     public Indexer() throws IOException {
         Directory dir = FSDirectory.open(Paths.get(indexDir));
         indexWriter = new IndexWriter(dir,new IndexWriterConfig(LuceneUtil.getAnalyzer()));
@@ -63,8 +54,7 @@ public class Indexer {
 
         if(url!=null&&!"".equals(url)){
             doc.add(new SortedDocValuesField("url",new BytesRef(url)));
-        //    doc.add(new StoredField("url", url, urlFieldType));
-
+            doc.add(new StoredField("url", url));
         }
         return doc;
     }
@@ -73,15 +63,17 @@ public class Indexer {
         long start = System.currentTimeMillis();
         NormalizedDoc normalizedDoc = null;
         Document document = null;
+        int count = 0;
         while (normalizedDocProcesser.hasNext()){
             normalizedDoc = normalizedDocProcesser.nextDocData();
             document = getDocument(normalizedDoc);
             indexDoc(document);
+            count++;
         }
         close();
         long end = System.currentTimeMillis();
 
-        System.out.println("Indexing files took "
+        System.out.println("Indexing " + count + " files took "
                 + (end - start) + " milliseconds");
     }
 

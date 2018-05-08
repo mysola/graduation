@@ -9,9 +9,9 @@ import java.util.Map;
 
 public class Test1 {
     public static void main(String[] args) throws Exception {
-//        Indexer indexer = new Indexer();
-//        indexer.index();
-//        indexer.close();
+        Indexer indexer = new Indexer();
+        indexer.index();
+        indexer.close();
 //
 //        Searcher searcher = new Searcher();
 //        searcher.init();

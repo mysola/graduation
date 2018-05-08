@@ -1,5 +1,6 @@
 package com.wangyang.service.impl;
 
+import com.wangyang.docIndex.SearchResult;
 import com.wangyang.docIndex.Searcher;
 import com.wangyang.entity.UrlClick;
 import com.wangyang.mapper.UrlClickDao;
@@ -18,6 +19,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
+import java.util.Base64;
 import java.util.Date;
 import java.util.Map;
 
@@ -32,10 +34,15 @@ public class UrlClickServiceImpl implements UserService {
 
     private static final String REAL_NAME_CLICK_KEY = "realNameClick";
 
+    private static final String SPLIT_STR = "|";
+
     private static Log queryLog = LogFactory.getLog("queryLog");
 
     private static Log clickLog = LogFactory.getLog("clickLog");
 
+    private final Base64.Decoder decoder = Base64.getDecoder();
+
+    private final Base64.Encoder encoder = Base64.getEncoder();
 
     @Autowired
     private Searcher searcher;
@@ -53,7 +60,7 @@ public class UrlClickServiceImpl implements UserService {
     }
 
     @Override
-    public UrlClick search(String queryStr) {
+    public SearchResult[] search(String queryStr, int pageNum) {
         String username = getUsername();
         if(username!=null&&username.equals(ANONYMOUS_STR)){
             searcher.setRealNameUrlClick(null);
@@ -72,8 +79,15 @@ public class UrlClickServiceImpl implements UserService {
             }
         }
         queryLog.info(username+" "+queryStr);
-        searcher.search(queryStr);
-        return null;
+        SearchResult[] results = searcher.search(queryStr,pageNum);
+        String url = null;
+        String query = null;
+        for(SearchResult searchResult : results){
+            url = searchResult.getUrl();
+            query = searchResult.getQuery();
+            searchResult.setLink(encoder.encodeToString((query+SPLIT_STR+url).getBytes()));
+        }
+        return results;
     }
 
     private String getUsername(){
@@ -88,7 +102,14 @@ public class UrlClickServiceImpl implements UserService {
     @Override
     public String link(String linkUrl) {
         String username = getUsername();
-        clickLog.info(username+""+linkUrl);
+
+        String tmp[] = new String(decoder.decode(linkUrl)).split(SPLIT_STR);
+        if(tmp.length==2){
+            String url = tmp[1];
+            String queryStr = tmp[0];
+            clickLog.info(username+" "+queryStr+" "+url);
+            return url;
+        }
         return null;
     }
 }
