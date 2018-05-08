@@ -25,7 +25,7 @@
 			<div class="col-xs-12 col-md-8">
 				<div class="input-group col-md-offset-1 col-md-8">
 					<input type="text" class="form-control input-lg" id="search-input">
-					<span class="input-group-addon btn btn-primary">搜索</span>
+					<span class="input-group-addon btn btn-primary" onclick="search()">搜索</span>
 				</div>
 			</div>
 
@@ -57,9 +57,9 @@
 
 	<div id="page-div" class="row page-pad">
 		<ul class="pager col-md-offset-2 col-md-8">
-			<li><a href="#">&larr;上一页</a></li>
+			<li><a href="#" id="last-page" onclick="lastPage()">&larr;上一页</a></li>
 			<li>第<label id="pageNum">1</label>页</li>
-			<li><a href="#">下一页&rarr;</a></li>
+			<li><a href="#" id="next-page" onclick="nextPage()">下一页&rarr;</a></li>
 		</ul>
 	</div>
 
@@ -103,40 +103,68 @@
 <script type="text/javascript" src="/js/jquery.min.js" ></script>
 <script type="text/javascript" src="/js/bootstrap.min.js" ></script>
 <script type="text/javascript">
-	var pageNum = getQueryString('pageNum');
-	if(pageNum==null){
-	    pageNum = 1;
-	}
-    $('#pageNum').text(pageNum);
-	var queryStr = getQueryString('queryStr');
-	search(queryStr,pageNum);
+    $("#search-input").keydown(function(event){
+        if(event.which == "13")
+            search();
+    });
+    var curPageNum = 1;
+    var curQueryStr = 1;
 
+	initPage();
+	function initPage() {
+        var pageNum = getQueryString('pageNum');
+        if(pageNum==null){
+            pageNum = 1;
+        }
+        var queryStr = getQueryString('queryStr');
+        searchInternal(queryStr,pageNum);
+    }
+
+	function search() {
+        var queryStr = $('#search-input').val();
+        searchInternal(queryStr,1);
+    }
+    
+    
     function getQueryString(name) {
         var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)"); //构造一个含有目标参数的正则表达式对象
         var r = window.location.search.substr(1).match(reg);  //匹配目标参数
         if (r != null) return unescape(r[2]); return null; //返回参数值
     }
-    function search(query,pageNum) {
+    function searchInternal(query,pageNum) {
         var url = "/search?queryStr="+query+"&pageNum="+pageNum;
         $.ajax({
             type: 'get',//方法类型
             url:url,
             contentType: "application/json; charset=utf-8",
             success: function (data) {
+				$('[tag=search-div]').remove();
                 $.each(data,function(index,value){
                     addSearchResult(value.title,value.content,value.link);
                 });
-			}
+                curPageNum = pageNum;
+                curQueryStr = query;
+                $('#search-input').val(query);
+                $('#pageNum').text(pageNum);
+            }
 
         });
     }
-    
+
     function addSearchResult(title,content,link) {
         var div = $('#hidden-search-div').clone(true);
+        div.attr('tag','search-div');
 		div.find('.link-url').attr("href","/link?linkUrl="+link);
-		div.find('.link-url').text(title);
-        div.find('.result-content').text(content);
+		div.find('.link-url').html(title);
+        div.find('.result-content').html(content);
         $('#search-result').append(div);
+    }
+    
+    function nextPage() {
+		searchInternal(curQueryStr,curPageNum+1);
+    }
+    function lastPage() {
+        searchInternal(curQueryStr,curPageNum-1);
     }
 </script>
 </body>

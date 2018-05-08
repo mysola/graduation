@@ -56,6 +56,8 @@ public class Searcher {
 
     private SortedDocValues[] docUrlValues;
 
+    private int[] baseDocs;
+
     public void setPageRank(Map<String, Double> pageRank) {
         this.pageRank = pageRank;
     }
@@ -87,23 +89,30 @@ public class Searcher {
     private void initDocUrlValues() throws IOException {
         int len = indexSearcher.getIndexReader().leaves().size();
         docUrlValues = new SortedDocValues[len];
+        baseDocs = new int[len];
+        LeafReaderContext leafReaderContext = null;
         for (int i = 0; i < len; i++) {
-            docUrlValues[i] = DocValues.getSorted(indexSearcher.getIndexReader()
-                    .leaves().get(i).reader(),"url");
+            leafReaderContext =indexSearcher.getIndexReader().leaves().get(i);
+            docUrlValues[i] = DocValues.getSorted(leafReaderContext.reader(),"url");
+            baseDocs[i] = leafReaderContext.docBase;
         }
     }
 
-    private String getDocUrlFromDocValues(int docID){
+    private String getDocUrlFromDocValues(int docID) {
         BytesRef urlByteRef = null;
-        for(SortedDocValues docValues : docUrlValues){
-            urlByteRef = docValues.get(docID);
+        int nextBaseDocIndex = 1;
+        while (nextBaseDocIndex < baseDocs.length && baseDocs[nextBaseDocIndex] <= docID) {
+            nextBaseDocIndex++;
+        }
 
-            if(urlByteRef!=null&&urlByteRef.length!=0){
-                return urlByteRef.utf8ToString();
-            }
+        urlByteRef = docUrlValues[nextBaseDocIndex - 1].get(docID - baseDocs[nextBaseDocIndex - 1]);
+        if (urlByteRef != null && urlByteRef.length != 0) {
+            return urlByteRef.utf8ToString();
         }
         return null;
     }
+
+
 
     private Query buildQuery(String queryStr) throws ParseException {
         Query query = queryParser.parse(queryStr);
@@ -114,7 +123,7 @@ public class Searcher {
         try {
             Query query = buildQuery(queryStr);
 
-            TopDocs topDocs = indexSearcher.search(query,3*10);
+            TopDocs topDocs = indexSearcher.search(query,pageNum*10);
             Document document = null;
             QueryScorer scorer = new QueryScorer(query);
             Fragmenter fragmenter = new SimpleSpanFragmenter(scorer);
@@ -122,7 +131,7 @@ public class Searcher {
             Highlighter highlighter = new Highlighter(simpleHTMLFormatter, scorer);
             highlighter.setTextFragmenter(fragmenter);
 
-            SearchResult[] results = new SearchResult[10];
+            SearchResult[] results = new SearchResult[topDocs.totalHits>10?10:topDocs.totalHits];
             int index = 0;
             for (int i = (pageNum-1)*10; i < pageNum*10&&i<topDocs.totalHits; i++) {
                 document = indexSearcher.doc(topDocs.scoreDocs[i].doc);
@@ -179,8 +188,8 @@ public class Searcher {
          * 重写评分方法
          **/
         @Override
-        public float customScore(int doc, float subQueryScore, float valSrcScore){
-            String url = getDocUrlFromDocValues(doc);
+        public float customScore(int doc, float subQueryScore, float valSrcScore) throws IOException {
+            String url = DocValues.getSorted(context.reader(),"url").get(doc).utf8ToString();
 
             float prScore = pageRank.get(url).floatValue();
 

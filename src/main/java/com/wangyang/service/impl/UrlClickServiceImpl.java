@@ -6,8 +6,8 @@ import com.wangyang.entity.UrlClick;
 import com.wangyang.mapper.UrlClickDao;
 import com.wangyang.pageRank.PageRanker;
 import com.wangyang.service.UserService;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -19,8 +19,9 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
-import java.util.Base64;
-import java.util.Date;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.util.Map;
 
 @Service
@@ -34,15 +35,11 @@ public class UrlClickServiceImpl implements UserService {
 
     private static final String REAL_NAME_CLICK_KEY = "realNameClick";
 
-    private static final String SPLIT_STR = "|";
+    private static final String SPLIT_STR = "--";
 
-    private static Log queryLog = LogFactory.getLog("queryLog");
+    private static Logger queryLog = LogManager.getLogger("queryLog");
 
-    private static Log clickLog = LogFactory.getLog("clickLog");
-
-    private final Base64.Decoder decoder = Base64.getDecoder();
-
-    private final Base64.Encoder encoder = Base64.getEncoder();
+    private static Logger clickLog = LogManager.getLogger("clickLog");
 
     @Autowired
     private Searcher searcher;
@@ -85,7 +82,11 @@ public class UrlClickServiceImpl implements UserService {
         for(SearchResult searchResult : results){
             url = searchResult.getUrl();
             query = searchResult.getQuery();
-            searchResult.setLink(encoder.encodeToString((query+SPLIT_STR+url).getBytes()));
+            try {
+                searchResult.setLink(URLEncoder.encode(query+SPLIT_STR+url,"utf-8"));
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            }
         }
         return results;
     }
@@ -103,11 +104,17 @@ public class UrlClickServiceImpl implements UserService {
     public String link(String linkUrl) {
         String username = getUsername();
 
-        String tmp[] = new String(decoder.decode(linkUrl)).split(SPLIT_STR);
-        if(tmp.length==2){
+        String[] tmp = new String[0];
+        try {
+            tmp = new String(URLDecoder.decode(linkUrl, "utf-8")).split(SPLIT_STR);
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+
+        if (tmp.length == 2) {
             String url = tmp[1];
             String queryStr = tmp[0];
-            clickLog.info(username+" "+queryStr+" "+url);
+            clickLog.info(username + " " + queryStr + " " + url);
             return url;
         }
         return null;
