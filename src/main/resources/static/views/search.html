@@ -45,7 +45,7 @@
 				<div class="input-group col-md-offset-1 col-md-10">
 					<div class="hero-unit">
 						<h3>
-							<a class="link-url"></a>
+							<a class="link-url" target="_blank"></a>
 						</h3>
 						<p class="result-content"></p>
 					</div>
@@ -75,19 +75,19 @@
 					<h3 class="text-center text-primary" id="myModalLabel">登录</h3>
 				</div>
 				<div class="modal-body">
-					<form action="" class="form col-md-12 center-block">
+					<form action="/login" method="post" class="form col-md-12 center-block">
 						<div class="form-group">
-							<input type="text" class="form-control input-lg" placeholder="账号">
+							<input type="text" name="username" class="form-control input-lg" placeholder="账号">
 						</div>
 						<div class="form-group">
-							<input type="password" class="form-control input-lg" placeholder="登录密码">
+							<input type="password" name="password" class="form-control input-lg" placeholder="登录密码">
 						</div>
 						<div class="form-group">
 							<div class="checkbox">
 								<label for="remember-me" style="padding-left: 0;margin-right: 23px;">
 									下次自动登录
 								</label>
-								<input type="checkbox" style="" id="remember-me">
+								<input type="checkbox" style="" name="remember-me" id="remember-me">
 							</div>
 							<button class="btn btn-primary btn-lg btn-block">立刻登录</button>
 						</div>
@@ -147,7 +147,6 @@
                 $('#search-input').val(query);
                 $('#pageNum').text(pageNum);
             }
-
         });
     }
 
