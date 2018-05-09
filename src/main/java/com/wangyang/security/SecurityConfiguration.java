@@ -27,6 +27,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
         auth.jdbcAuthentication()
+                .passwordEncoder(new MyPasswordEncoder())
                 .dataSource(dataSource)
                 .usersByUsernameQuery("select username,password,enabled from user_inf where username=?")
                 .authoritiesByUsernameQuery("select username,authority from user_inf where username=?")
@@ -40,6 +41,11 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
         http.authorizeRequests()
                 .antMatchers("/*").permitAll()
             .and()
+            .formLogin()
+            .successHandler(new MyAuthenticationSuccessHandler())
+            .and()
+            .csrf()
+                .disable()
             .logout()
                 .logoutSuccessHandler(myLogoutSucessHandler);
 

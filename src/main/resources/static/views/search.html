@@ -75,7 +75,7 @@
 					<h3 class="text-center text-primary" id="myModalLabel">登录</h3>
 				</div>
 				<div class="modal-body">
-					<form action="/login" method="post" class="form col-md-12 center-block">
+					<form action="/login" method="post" class="form col-md-12 center-block" id="loginForm">
 						<div class="form-group">
 							<input type="text" name="username" class="form-control input-lg" placeholder="账号">
 						</div>
@@ -89,7 +89,7 @@
 								</label>
 								<input type="checkbox" style="" name="remember-me" id="remember-me">
 							</div>
-							<button class="btn btn-primary btn-lg btn-block">立刻登录</button>
+							<a class="btn btn-primary btn-lg btn-block" onclick="login();">立刻登录</a>
 						</div>
 					</form>
 				</div>
@@ -102,6 +102,7 @@
 </div>
 <script type="text/javascript" src="/js/jquery.min.js" ></script>
 <script type="text/javascript" src="/js/bootstrap.min.js" ></script>
+<script type="text/javascript" src="/js/jquery.form.js" ></script>
 <script type="text/javascript">
     $("#search-input").keydown(function(event){
         if(event.which == "13")
@@ -164,6 +165,19 @@
     }
     function lastPage() {
         searchInternal(curQueryStr,curPageNum-1);
+    }
+    
+    function login() {
+        $("#loginForm").ajaxSubmit({
+            complete: function (data) {
+                if(data.status == '200'){
+                    $("#myModal").modal('hide');
+                }
+                else {
+                    alert(2);
+                }
+            }
+        });
     }
 </script>
 </body>
